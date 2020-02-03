@@ -22,6 +22,11 @@ public class ExternalEmailServiceDelegate {
 	@Retryable(value = ResourceAccessException.class, maxAttemptsExpression = "${max-retry-attempts}")
 	public Optional<EmailBatchDto> getEmailBatch(String resourceUrl) {
 		EmailBatchDto emailBatch = restTemplate.getForObject(resourceUrl, EmailBatchDto.class);
+
+		if (emailBatch == null) {
+			return Optional.empty();
+		}
+
 		return Optional.of(emailBatch);
 	}
 
