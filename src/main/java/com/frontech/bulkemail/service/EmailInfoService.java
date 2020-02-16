@@ -12,6 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.hibernate.StaleStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -19,8 +20,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -145,6 +148,8 @@ public class EmailInfoService {
 	}
 
 	@Scheduled(fixedDelayString = "${email-batch-period}")
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Retryable(StaleStateException.class)
 	protected void scheduleFixedDelayTask() {
 
 		logger.trace("scheduleFixedDelayTask: {}", emailCountMap);
