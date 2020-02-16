@@ -96,7 +96,6 @@ public class EmailInfoControllerSaveEmailsTest {
 		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1, emailInfo2, emailInfo3);
 
 		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
-
 	}
 
 	@Test
@@ -273,6 +272,117 @@ public class EmailInfoControllerSaveEmailsTest {
 		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1);
 
 		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
+	}
+
+	@Test
+	public void shouldSaveEmailsWithoutResourcesCallServiceTwice()
+			throws HttpMessageNotWritableException, IOException, Exception {
+
+		// Request
+
+		EmailBatchRequest emailBatchRequest1 = new EmailBatchRequest();
+		List<String> emails1 = Arrays.asList("deneme1@comeon.com", "deneme2@cherry.se", "deneme3@cherry.se");
+		emailBatchRequest1.setEmails(emails1);
+
+		EmailBatchRequest emailBatchRequest2 = new EmailBatchRequest();
+		List<String> emails2 = Arrays.asList("deneme4@comeon.com", "deneme5@cherry.se", "deneme6@cherry.se");
+		emailBatchRequest2.setEmails(emails2);
+
+		// Setup
+
+		Set<String> emailKeySet = new HashSet<>();
+		emailKeySet.add("deneme1@comeon.com");
+		emailKeySet.add("deneme2@cherry.se");
+		emailKeySet.add("deneme3@cherry.se");
+		emailKeySet.add("deneme4@comeon.com");
+		emailKeySet.add("deneme5@cherry.se");
+		emailKeySet.add("deneme6@cherry.se");
+
+		when(emailInfoRepository.findByEmailIn(emailKeySet)).thenReturn(new ArrayList<>());
+
+		// Execute and verify
+
+		mockMvc.perform(post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML)
+				.content(xml(emailBatchRequest1))).andDo(print()).andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("result", is("done")))
+				.andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		mockMvc.perform(post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML)
+				.content(xml(emailBatchRequest2))).andDo(print()).andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("result", is("done")))
+				.andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		EmailInfo emailInfo1 = new EmailInfo("deneme1@comeon.com", 1L);
+		EmailInfo emailInfo2 = new EmailInfo("deneme2@cherry.se", 1L);
+		EmailInfo emailInfo3 = new EmailInfo("deneme3@cherry.se", 1L);
+		EmailInfo emailInfo4 = new EmailInfo("deneme4@comeon.com", 1L);
+		EmailInfo emailInfo5 = new EmailInfo("deneme5@cherry.se", 1L);
+		EmailInfo emailInfo6 = new EmailInfo("deneme6@cherry.se", 1L);
+		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1, emailInfo2, emailInfo3, emailInfo4, emailInfo5,
+				emailInfo6);
+
+		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
+	}
+
+	@Test
+	public void shouldSaveEmailsWithoutResourcesCallServiceTwiceWithTimeInBetween()
+			throws HttpMessageNotWritableException, IOException, Exception {
+
+		// Request
+
+		EmailBatchRequest emailBatchRequest1 = new EmailBatchRequest();
+		List<String> emails1 = Arrays.asList("deneme1@comeon.com", "deneme2@cherry.se", "deneme3@cherry.se");
+		emailBatchRequest1.setEmails(emails1);
+
+		EmailBatchRequest emailBatchRequest2 = new EmailBatchRequest();
+		List<String> emails2 = Arrays.asList("deneme4@comeon.com", "deneme5@cherry.se", "deneme6@cherry.se");
+		emailBatchRequest2.setEmails(emails2);
+
+		// Setup
+
+		Set<String> emailKeySet = new HashSet<>();
+		emailKeySet.add("deneme1@comeon.com");
+		emailKeySet.add("deneme2@cherry.se");
+		emailKeySet.add("deneme3@cherry.se");
+		emailKeySet.add("deneme4@comeon.com");
+		emailKeySet.add("deneme5@cherry.se");
+		emailKeySet.add("deneme6@cherry.se");
+
+		when(emailInfoRepository.findByEmailIn(emailKeySet)).thenReturn(new ArrayList<>());
+
+		// Execute and verify
+
+		mockMvc.perform(post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML)
+				.content(xml(emailBatchRequest1))).andDo(print()).andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("result", is("done")))
+				.andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		mockMvc.perform(post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML)
+				.content(xml(emailBatchRequest2))).andDo(print()).andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("result", is("done")))
+				.andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		EmailInfo emailInfo1 = new EmailInfo("deneme1@comeon.com", 1L);
+		EmailInfo emailInfo2 = new EmailInfo("deneme2@cherry.se", 1L);
+		EmailInfo emailInfo3 = new EmailInfo("deneme3@cherry.se", 1L);
+		List<EmailInfo> cachedEmailInfos1 = Arrays.asList(emailInfo1, emailInfo2, emailInfo3);
+
+		Mockito.verify(emailInfoRepository, times(1))
+				.createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos1)));
+
+		EmailInfo emailInfo4 = new EmailInfo("deneme4@comeon.com", 1L);
+		EmailInfo emailInfo5 = new EmailInfo("deneme5@cherry.se", 1L);
+		EmailInfo emailInfo6 = new EmailInfo("deneme6@cherry.se", 1L);
+		List<EmailInfo> cachedEmailInfos2 = Arrays.asList(emailInfo4, emailInfo5, emailInfo6);
+
+		Mockito.verify(emailInfoRepository, times(1))
+				.createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos2)));
 
 	}
 
