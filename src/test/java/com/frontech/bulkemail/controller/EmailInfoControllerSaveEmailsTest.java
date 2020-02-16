@@ -211,13 +211,46 @@ public class EmailInfoControllerSaveEmailsTest {
 	}
 
 	@Test
-	public void shouldSaveEmailsWithoutResourcesRemoveIncorrectEmails()
+	public void shouldSaveEmailsWithoutResourcesRemoveEmailsFromUnwantedDomains()
 			throws HttpMessageNotWritableException, IOException, Exception {
 
 		// Request
 
 		EmailBatchRequest emailBatchRequest = new EmailBatchRequest();
 		List<String> emails = Arrays.asList("deneme1@comeon.com", "deneme2@cherry2.se", "deneme3@comeon3.se");
+		emailBatchRequest.setEmails(emails);
+
+		// Setup
+
+		Set<String> emailKeySet = new HashSet<>();
+		emailKeySet.add("deneme1@comeon.com");
+
+		when(emailInfoRepository.findByEmailIn(emailKeySet)).thenReturn(new ArrayList<>());
+
+		// Execute and verify
+
+		mockMvc.perform(
+				post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML).content(xml(emailBatchRequest)))
+				.andDo(print()).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("result", is("done"))).andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		EmailInfo emailInfo1 = new EmailInfo("deneme1@comeon.com", 1L);
+		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1);
+
+		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
+
+	}
+
+	@Test
+	public void shouldSaveEmailsWithoutResourcesRemoveInvalidEmails()
+			throws HttpMessageNotWritableException, IOException, Exception {
+
+		// Request
+
+		EmailBatchRequest emailBatchRequest = new EmailBatchRequest();
+		List<String> emails = Arrays.asList("deneme1@comeon.com", "deneme2.cherry.se", "deneme3-comeon.com");
 		emailBatchRequest.setEmails(emails);
 
 		// Setup
