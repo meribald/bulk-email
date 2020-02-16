@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -23,6 +22,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 
+import org.hamcrest.core.IsNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -61,9 +61,6 @@ public class EmailInfoControllerSaveEmailsTest {
 	@SpyBean
 	private ExternalEmailServiceDelegate externalEmailServiceDelegate;
 
-	protected static final MediaType CONTENT_TYPE = new MediaType(MediaType.APPLICATION_XML.getType(),
-			MediaType.APPLICATION_XML.getSubtype(), Charset.forName("utf8"));
-
 	@Test
 	public void shouldSaveEmailsWithoutResources() throws HttpMessageNotWritableException, IOException, Exception {
 
@@ -87,7 +84,7 @@ public class EmailInfoControllerSaveEmailsTest {
 		mockMvc.perform(
 				post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML).content(xml(emailBatchRequest)))
 				.andDo(print()).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
-				.andExpect(jsonPath("result", is("done")));
+				.andExpect(jsonPath("result", is("done"))).andExpect(jsonPath("errorResponse", IsNull.nullValue()));
 
 		Thread.sleep(8000);
 
