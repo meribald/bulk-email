@@ -50,7 +50,6 @@ public class EmailInfoService {
 
 	private final Map<String, Long> emailCountMap = new HashMap<>();
 	private final Lock emailCountMapLock = new ReentrantLock();
-	private static final long FIVE_MINUTES_MILLISEC = 300000;
 	private final EmailInfoRepository emailRepository;
 	private final ExternalEmailServiceDelegate externalEmailServiceDelegate;
 
@@ -142,7 +141,7 @@ public class EmailInfoService {
 		return new DeleteEmailInfoResponse();
 	}
 
-	@Scheduled(fixedDelay = FIVE_MINUTES_MILLISEC)
+	@Scheduled(fixedDelayString = "${email-batch-period}")
 	protected void scheduleFixedDelayTask() {
 
 		emailCountMapLock.lock();
