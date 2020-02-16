@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.xml.bind.JAXBContext;
@@ -42,6 +43,7 @@ import com.frontech.bulkemail.model.EmailInfo;
 import com.frontech.bulkemail.request.EmailBatchRequest;
 import com.frontech.bulkemail.service.EmailInfoService;
 import com.frontech.bulkemail.service.delegate.ExternalEmailServiceDelegate;
+import com.frontech.bulkemail.service.delegate.dto.EmailBatchDto;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -58,7 +60,7 @@ public class EmailInfoControllerSaveEmailsTest {
 	@MockBean
 	private EmailInfoRepository emailInfoRepository;
 
-	@SpyBean
+	@MockBean
 	private ExternalEmailServiceDelegate externalEmailServiceDelegate;
 
 	@Test
@@ -92,6 +94,55 @@ public class EmailInfoControllerSaveEmailsTest {
 		EmailInfo emailInfo2 = new EmailInfo("deneme2@cherry.se", 1L);
 		EmailInfo emailInfo3 = new EmailInfo("deneme3@cherry.se", 1L);
 		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1, emailInfo2, emailInfo3);
+
+		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
+
+	}
+
+	@Test
+	public void shouldSaveEmailsWithResources() throws HttpMessageNotWritableException, IOException, Exception {
+
+		// Request
+
+		EmailBatchRequest emailBatchRequest = new EmailBatchRequest();
+		List<String> emails = Arrays.asList("deneme1@comeon.com", "deneme2@cherry.se", "deneme3@cherry.se");
+		emailBatchRequest.setEmails(emails);
+
+		List<String> urls = Arrays.asList("http://localhost:8201/emailresource/without-resource");
+		emailBatchRequest.setResources(urls);
+
+		// Setup
+
+		EmailBatchDto emailBatchFromExternalResource = new EmailBatchDto();
+		List<String> emailsFromExternalResource = Arrays.asList("deneme2@cherry.se", "deneme2@cherry.se",
+				"deneme4@cherry.se");
+		emailBatchFromExternalResource.setEmails(emailsFromExternalResource);
+
+		when(externalEmailServiceDelegate.getEmailBatch("http://localhost:8201/emailresource/without-resource"))
+				.thenReturn(Optional.of(emailBatchFromExternalResource));
+
+		Set<String> emailKeySet = new HashSet<>();
+		emailKeySet.add("deneme1@comeon.com");
+		emailKeySet.add("deneme2@cherry.se");
+		emailKeySet.add("deneme3@cherry.se");
+		emailKeySet.add("deneme4@cherry.se");
+
+		when(emailInfoRepository.findByEmailIn(emailKeySet)).thenReturn(new ArrayList<>());
+
+		// Execute and verify
+
+		mockMvc.perform(
+				post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML).content(xml(emailBatchRequest)))
+				.andDo(print()).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("result", is("done"))).andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		EmailInfo emailInfo1 = new EmailInfo("deneme1@comeon.com", 1L);
+		EmailInfo emailInfo2 = new EmailInfo("deneme2@cherry.se", 3L);
+		EmailInfo emailInfo3 = new EmailInfo("deneme3@cherry.se", 1L);
+		EmailInfo emailInfo4 = new EmailInfo("deneme4@cherry.se", 1L);
+		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1, emailInfo2, emailInfo3, emailInfo4);
 
 		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
 

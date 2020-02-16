@@ -12,6 +12,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +54,7 @@ public class EmailInfoService {
 	private final Lock emailCountMapLock = new ReentrantLock();
 	private final EmailInfoRepository emailRepository;
 	private final ExternalEmailServiceDelegate externalEmailServiceDelegate;
+	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	public EmailInfoService(EmailInfoRepository emailRepository,
 			ExternalEmailServiceDelegate externalEmailServiceDelegate) {
@@ -180,6 +183,8 @@ public class EmailInfoService {
 
 	private void addExternalResourceEmailsToCache(EmailBatchDto emailBatch) {
 
+		logger.trace("Inside addExternalResourceEmailsToCache: {}", emailBatch);
+
 		if (CollectionUtils.isEmpty(emailBatch.getResources())) {
 			return;
 		}
@@ -195,6 +200,8 @@ public class EmailInfoService {
 
 		ConcurrentLinkedQueue<EmailBatchDto> responseEmails = new ConcurrentLinkedQueue<>();
 
+		logger.trace("Before calling external service: {}", resourceUrls);
+
 		for (String resourceUrl : resourceUrls) {
 			ExternalEmailResponseBuilder responseBuilder = new ExternalEmailResponseBuilder(
 					externalEmailServiceDelegate, resourceUrl, responseEmails);
@@ -203,10 +210,13 @@ public class EmailInfoService {
 
 		try {
 			asyncTaskRunner.run();
+
+			logger.trace("After calling external service: {}", responseEmails);
+
 			addEmailsToCache(fillResponseEmailsFromResponseBatches(responseEmails));
 			responseEmails.forEach(this::addExternalResourceEmailsToCache);
 		} catch (InterruptedException | ExecutionException e) {
-			// TODO Auto-generated catch block
+			logger.error("Exeption caught while adding external emails to cache: {}", e);
 			e.printStackTrace();
 		}
 	}

@@ -32,4 +32,9 @@ public class EmailBatchDto {
 		this.resources = resources;
 	}
 
+	@Override
+	public String toString() {
+		return "EmailBatchDto [emails=" + emails + ", resources=" + resources + "]";
+	}
+
 }

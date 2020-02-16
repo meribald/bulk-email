@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.mockito.ArgumentMatcher;
+import org.springframework.util.CollectionUtils;
 
 import com.frontech.bulkemail.model.EmailInfo;
 
@@ -20,10 +21,28 @@ public class UndorderedListMatcher implements ArgumentMatcher<List<EmailInfo>> {
 	@Override
 	public boolean matches(List<EmailInfo> actualEmailInfos) {
 
+		if ((CollectionUtils.isEmpty(actualEmailInfos) && !CollectionUtils.isEmpty(expectedEmailInfos))
+				|| (!CollectionUtils.isEmpty(actualEmailInfos) && CollectionUtils.isEmpty(expectedEmailInfos))) {
+			return false;
+		}
+
+		if (actualEmailInfos.size() != expectedEmailInfos.size()) {
+			return false;
+		}
+
 		Collections.sort(actualEmailInfos, comparing(EmailInfo::getEmail));
 		Collections.sort(expectedEmailInfos, comparing(EmailInfo::getEmail));
 
-		return expectedEmailInfos.equals(actualEmailInfos);
+		for (int i = 0; i < actualEmailInfos.size(); ++i) {
+			boolean emailEquals = expectedEmailInfos.get(i).getEmail().equals(actualEmailInfos.get(i).getEmail());
+			boolean countEquals = expectedEmailInfos.get(i).getCount().equals(actualEmailInfos.get(i).getCount());
+
+			if (!emailEquals || !countEquals) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 }
