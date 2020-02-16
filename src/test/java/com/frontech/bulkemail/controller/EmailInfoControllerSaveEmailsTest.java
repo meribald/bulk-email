@@ -383,7 +383,46 @@ public class EmailInfoControllerSaveEmailsTest {
 
 		Mockito.verify(emailInfoRepository, times(1))
 				.createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos2)));
+	}
 
+	@Test
+	public void shouldUpdateEmailsWithoutResources() throws HttpMessageNotWritableException, IOException, Exception {
+
+		// Request
+
+		EmailBatchRequest emailBatchRequest = new EmailBatchRequest();
+		List<String> emails = Arrays.asList("deneme1@comeon.com", "deneme2@cherry.se", "deneme3@cherry.se");
+		emailBatchRequest.setEmails(emails);
+
+		// Setup
+
+		Set<String> emailKeySet = new HashSet<>();
+		emailKeySet.add("deneme1@comeon.com");
+		emailKeySet.add("deneme2@cherry.se");
+		emailKeySet.add("deneme3@cherry.se");
+
+		EmailInfo existingEmailInfo1 = new EmailInfo("deneme1@comeon.com", 10L);
+		EmailInfo existingEmailInfo2 = new EmailInfo("deneme2@cherry.se", 50L);
+		EmailInfo existingEmailInfo3 = new EmailInfo("deneme3@cherry.se", 1L);
+		List<EmailInfo> existingEmailInfos = Arrays.asList(existingEmailInfo1, existingEmailInfo2, existingEmailInfo3);
+
+		when(emailInfoRepository.findByEmailIn(emailKeySet)).thenReturn(existingEmailInfos);
+
+		// Execute and verify
+
+		mockMvc.perform(
+				post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML).content(xml(emailBatchRequest)))
+				.andDo(print()).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("result", is("done"))).andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		EmailInfo emailInfo1 = new EmailInfo("deneme1@comeon.com", 11L);
+		EmailInfo emailInfo2 = new EmailInfo("deneme2@cherry.se", 51L);
+		EmailInfo emailInfo3 = new EmailInfo("deneme3@cherry.se", 2L);
+		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1, emailInfo2, emailInfo3);
+
+		Mockito.verify(emailInfoRepository, times(1)).updateBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
 	}
 
 	private String xml(EmailBatchRequest request) throws HttpMessageNotWritableException, IOException, JAXBException {
