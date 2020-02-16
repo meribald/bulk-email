@@ -148,6 +148,69 @@ public class EmailInfoControllerSaveEmailsTest {
 
 	}
 
+	@Test
+	public void shouldSaveEmailsWithResourcesInResources()
+			throws HttpMessageNotWritableException, IOException, Exception {
+
+		// Request
+
+		EmailBatchRequest emailBatchRequest = new EmailBatchRequest();
+		List<String> emails = Arrays.asList("deneme1@comeon.com", "deneme2@cherry.se", "deneme3@cherry.se");
+		emailBatchRequest.setEmails(emails);
+
+		String firstResourceUrl = "http://localhost:8201/emailresource/without-resource";
+		List<String> urls = Arrays.asList(firstResourceUrl);
+		emailBatchRequest.setResources(urls);
+
+		// Setup
+
+		EmailBatchDto emailBatchFromExternalResource = new EmailBatchDto();
+		List<String> emailsFromExternalResource = Arrays.asList("deneme2@cherry.se", "deneme2@cherry.se",
+				"deneme4@cherry.se");
+		emailBatchFromExternalResource.setEmails(emailsFromExternalResource);
+		String secondResourceUrl = "http://localhost:8202/emailresource/without-resource";
+		List<String> urlsFromExternalResource = Arrays.asList(secondResourceUrl);
+		emailBatchFromExternalResource.setResources(urlsFromExternalResource);
+
+		when(externalEmailServiceDelegate.getEmailBatch(firstResourceUrl))
+				.thenReturn(Optional.of(emailBatchFromExternalResource));
+
+		EmailBatchDto emailBatchFromExternalResource2 = new EmailBatchDto();
+		List<String> emailsFromExternalResource2 = Arrays.asList("deneme5@cherry.se", "deneme4@cherry.se");
+		emailBatchFromExternalResource2.setEmails(emailsFromExternalResource2);
+
+		when(externalEmailServiceDelegate.getEmailBatch(secondResourceUrl))
+				.thenReturn(Optional.of(emailBatchFromExternalResource2));
+
+		Set<String> emailKeySet = new HashSet<>();
+		emailKeySet.add("deneme1@comeon.com");
+		emailKeySet.add("deneme2@cherry.se");
+		emailKeySet.add("deneme3@cherry.se");
+		emailKeySet.add("deneme4@cherry.se");
+		emailKeySet.add("deneme5@cherry.se");
+
+		when(emailInfoRepository.findByEmailIn(emailKeySet)).thenReturn(new ArrayList<>());
+
+		// Execute and verify
+
+		mockMvc.perform(
+				post("/email-info/batch-create").contentType(MediaType.APPLICATION_XML).content(xml(emailBatchRequest)))
+				.andDo(print()).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("result", is("done"))).andExpect(jsonPath("errorResponse", IsNull.nullValue()));
+
+		Thread.sleep(8000);
+
+		EmailInfo emailInfo1 = new EmailInfo("deneme1@comeon.com", 1L);
+		EmailInfo emailInfo2 = new EmailInfo("deneme2@cherry.se", 3L);
+		EmailInfo emailInfo3 = new EmailInfo("deneme3@cherry.se", 1L);
+		EmailInfo emailInfo4 = new EmailInfo("deneme4@cherry.se", 2L);
+		EmailInfo emailInfo5 = new EmailInfo("deneme5@cherry.se", 1L);
+		List<EmailInfo> cachedEmailInfos = Arrays.asList(emailInfo1, emailInfo2, emailInfo3, emailInfo4, emailInfo5);
+
+		Mockito.verify(emailInfoRepository, times(1)).createBatch(argThat(new UndorderedListMatcher(cachedEmailInfos)));
+
+	}
+
 	private String xml(EmailBatchRequest request) throws HttpMessageNotWritableException, IOException, JAXBException {
 		JAXBContext jaxbContext = JAXBContext.newInstance(EmailBatchRequest.class);
 		Marshaller jaxbMarshaller = jaxbContext.createMarshaller();

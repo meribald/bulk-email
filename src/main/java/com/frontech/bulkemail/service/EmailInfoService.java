@@ -147,6 +147,8 @@ public class EmailInfoService {
 	@Scheduled(fixedDelayString = "${email-batch-period}")
 	protected void scheduleFixedDelayTask() {
 
+		logger.trace("scheduleFixedDelayTask: {}", emailCountMap);
+
 		emailCountMapLock.lock();
 
 		if (emailCountMap.isEmpty()) {
